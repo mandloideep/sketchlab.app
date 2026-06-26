@@ -332,8 +332,10 @@ export class Controller {
       }
     }
 
-    const hitShape = scene.hitTestShape(world);
-    if (hitShape) {
+    // single z-order-aware pick so an arrow drawn over a shape stays clickable
+    const hit = scene.hitTestTop(world, this.worldTol(8));
+    if (hit?.kind === "shape") {
+      const hitShape = hit.id;
       if (e.shiftKey) {
         const shapes = new Set(sel.shapes);
         if (shapes.has(hitShape)) shapes.delete(hitShape);
@@ -347,8 +349,8 @@ export class Controller {
       return;
     }
 
-    const hitEdge = scene.hitTestEdge(world, this.worldTol(8));
-    if (hitEdge) {
+    if (hit?.kind === "edge") {
+      const hitEdge = hit.id;
       if (e.shiftKey) {
         const edges = new Set(sel.edges);
         if (edges.has(hitEdge)) edges.delete(hitEdge);
@@ -673,14 +675,13 @@ export class Controller {
   private onDblClick = (e: MouseEvent): void => {
     const p = this.local(e);
     const world = screenToWorld(p.x, p.y);
-    const hitShape = scene.hitTestShape(world);
-    if (hitShape) {
-      this.beginShapeText(hitShape);
+    const hit = scene.hitTestTop(world, this.worldTol(8));
+    if (hit?.kind === "shape") {
+      this.beginShapeText(hit.id);
       return;
     }
-    const hitEdge = scene.hitTestEdge(world, this.worldTol(8));
-    if (hitEdge) {
-      this.beginEdgeLabel(hitEdge);
+    if (hit?.kind === "edge") {
+      this.beginEdgeLabel(hit.id);
       return;
     }
     // empty canvas -> create a text object and start typing

@@ -30,7 +30,18 @@ export async function mountDashboard(appRoot: HTMLElement): Promise<MountedView>
     h(
       "div",
       { class: "dash__brand" },
-      h("span", { class: "dash__logo" }),
+      h(
+        "picture",
+        null,
+        h("source", { srcset: "./logo.webp", type: "image/webp" }),
+        h("img", {
+          class: "dash__logo",
+          src: "./logo.png",
+          alt: "Sketch Lab",
+          width: "26",
+          height: "26",
+        }),
+      ),
       h("h1", null, "Sketch Lab"),
     ),
     newBtn,

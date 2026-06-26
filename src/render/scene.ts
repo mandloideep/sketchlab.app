@@ -1,6 +1,6 @@
 import { Application, Container, Graphics } from "pixi.js";
 import { $camera, doc } from "../state/store";
-import type { ID } from "../state/types";
+import type { Edge, ID } from "../state/types";
 import {
   type Pt,
   distToSegment,
@@ -244,21 +244,37 @@ class Scene {
     return null;
   }
 
-  hitTestEdge(p: Pt, tol: number): ID | null {
-    let best: ID | null = null;
-    let bestD = tol;
-    for (const e of Object.values(doc.board.edges)) {
-      const geo = resolveEdgeGeometry(doc.board.edges, doc.board.shapes, e);
-      const pts = geo.ctrl ? quadPoints(geo.p1, geo.ctrl, geo.p2, 14) : [geo.p1, geo.p2];
-      for (let i = 0; i < pts.length - 1; i++) {
-        const d = distToSegment(p, pts[i], pts[i + 1]);
-        if (d < bestD) {
-          bestD = d;
-          best = e.id;
-        }
-      }
+  /** Shortest distance from `p` to edge `e`'s rendered polyline, in world units. */
+  private edgeDist(e: Edge, p: Pt): number {
+    const geo = resolveEdgeGeometry(doc.board.edges, doc.board.shapes, e);
+    const pts = geo.ctrl ? quadPoints(geo.p1, geo.ctrl, geo.p2, 14) : [geo.p1, geo.p2];
+    let best = Infinity;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const d = distToSegment(p, pts[i], pts[i + 1]);
+      if (d < best) best = d;
     }
     return best;
+  }
+
+  /**
+   * Topmost selectable target under `p`, honoring the unified paint order so a
+   * thin arrow drawn above a shape stays clickable — and a shape covering an
+   * arrow still wins. Walks `doc.board.order` front→back and returns the first
+   * shape whose body contains `p` or edge within `tol` (world units).
+   */
+  hitTestTop(p: Pt, tol: number): { kind: "shape" | "edge"; id: ID } | null {
+    const order = doc.board.order;
+    for (let i = order.length - 1; i >= 0; i--) {
+      const id = order[i];
+      const s = doc.board.shapes[id];
+      if (s) {
+        if (pointInShape(s, p)) return { kind: "shape", id };
+        continue;
+      }
+      const e = doc.board.edges[id];
+      if (e && this.edgeDist(e, p) <= tol) return { kind: "edge", id };
+    }
+    return null;
   }
 
   shapesInRect(x0: number, y0: number, x1: number, y1: number): ID[] {
