@@ -1,8 +1,13 @@
-import { getFloorSpacing, setFloorSpacing } from "../interaction/camera";
+import { getFloorSpacing, getLayerFade, setFloorSpacing, setLayerFade } from "../interaction/camera";
 import { DEFAULT_FLOOR_COLOR } from "../render/boardLayers";
-import { MAX_FLOOR_STEP, MIN_FLOOR_STEP } from "../render/shading";
+import {
+  MAX_FLOOR_STEP,
+  MAX_LAYER_FADE_STEP,
+  MIN_FLOOR_STEP,
+  MIN_LAYER_FADE_STEP,
+} from "../render/shading";
 import * as actions from "../state/actions";
-import { $activeLayer, $floorSpacing, $revision, $selection, doc } from "../state/store";
+import { $activeLayer, $floorSpacing, $layerFade, $revision, $selection, doc } from "../state/store";
 import { h, toast } from "./dom";
 import { createSwatchPicker, LAYER_ACCENTS } from "./swatchPicker";
 
@@ -17,6 +22,19 @@ const ICON_EYE_OFF = svg(
   '<path d="M3 3l18 18"/><path d="M10.6 5.1A10.9 10.9 0 0 1 12 5c6.4 0 10 7 10 7a18.4 18.4 0 0 1-3.2 4.2"/><path d="M6.5 6.6A18.2 18.2 0 0 0 2 12s3.6 7 10 7a10.8 10.8 0 0 0 4-.75"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
 );
 const ICON_COLLAPSE = svg('<path d="M9 6l6 6-6 6"/>');
+
+// The fade slider runs 0..100 as a "how much do distant floors fade" strength
+// (left = keep far floors clear, right = fade them out fast), which is the
+// INVERSE of the underlying fade step (a higher step = clearer far floors).
+const FADE_SLIDER_SPAN = MAX_LAYER_FADE_STEP - MIN_LAYER_FADE_STEP;
+/** Slider strength 0..100 → fade step (0 → clearest/high step, 100 → most fade/low step). */
+function sliderToFade(v: number): number {
+  return MAX_LAYER_FADE_STEP - (v / 100) * FADE_SLIDER_SPAN;
+}
+/** Fade step → slider strength 0..100 (inverse of sliderToFade). */
+function fadeToSlider(step: number): number {
+  return Math.round(((MAX_LAYER_FADE_STEP - step) / FADE_SLIDER_SPAN) * 100);
+}
 
 export interface LayersPanelOptions {
   onCollapseChange?: (collapsed: boolean) => void;
@@ -44,6 +62,8 @@ export class LayersPanel {
   private list: HTMLDivElement;
   private spread: HTMLLabelElement;
   private spreadInput: HTMLInputElement;
+  private fade: HTMLLabelElement;
+  private fadeInput: HTMLInputElement;
   private collapsed = false;
   /** a refresh requested while collapsed is deferred until the panel is shown again */
   private dirty = false;
@@ -102,6 +122,27 @@ export class LayersPanel {
       this.spreadInput,
     ) as HTMLLabelElement;
 
+    // Distant-fade dial: how quickly floors away from the active layer fade out,
+    // so a deep stack reads at a glance. Drag right to fade far floors (e.g.
+    // 3 floors away) out faster; left keeps them clear. Drives the live fade
+    // falloff via setLayerFade / the $layerFade atom.
+    this.fadeInput = h("input", {
+      type: "range",
+      class: "layers-panel__spread-range",
+      min: "0",
+      max: "100",
+      step: "1",
+      value: String(fadeToSlider(getLayerFade())),
+      "aria-label": "Distant layer fade",
+      oninput: (e: Event) => setLayerFade(sliderToFade(Number((e.target as HTMLInputElement).value))),
+    }) as HTMLInputElement;
+    this.fade = h(
+      "label",
+      { class: "layers-panel__spread" },
+      h("span", null, "Distant layer fade"),
+      this.fadeInput,
+    ) as HTMLLabelElement;
+
     this.panel = h(
       "div",
       {
@@ -123,6 +164,7 @@ export class LayersPanel {
       addBtn,
       this.list,
       this.spread,
+      this.fade,
     );
 
     editor.append(this.panel);
@@ -135,6 +177,12 @@ export class LayersPanel {
     this.unsubs.push(
       $floorSpacing.subscribe((v) => {
         this.spreadInput.value = String(Math.round(v));
+      }),
+    );
+    // follow any external fade change so the slider stays truthful
+    this.unsubs.push(
+      $layerFade.subscribe((v) => {
+        this.fadeInput.value = String(fadeToSlider(v));
       }),
     );
     this.refresh();
@@ -181,10 +229,12 @@ export class LayersPanel {
     for (const row of rows) {
       this.list.appendChild(this.row(row, active, hasSelection, rows.length));
     }
-    // spreading only means something with 2+ floors to push apart
+    // spreading / fading only mean something with 2+ floors to separate
     const single = rows.length < 2;
     this.spreadInput.disabled = single;
     this.spread.classList.toggle("is-disabled", single);
+    this.fadeInput.disabled = single;
+    this.fade.classList.toggle("is-disabled", single);
   }
 
   expand(): void {

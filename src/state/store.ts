@@ -1,5 +1,5 @@
 import { atom } from "nanostores";
-import { FLOOR_STEP } from "../render/shading";
+import { FLOOR_STEP, LAYER_FADE_STEP } from "../render/shading";
 import { uid } from "../util";
 import { DEFAULT_TEXT_FONT_SIZE } from "./style";
 import type { Board, Camera, SelectionState, ToolName } from "./types";
@@ -54,6 +54,12 @@ export const $activeLayer = atom<number>(0);
  * gesture stay in sync. Transient view state — never persisted.
  */
 export const $floorSpacing = atom<number>(FLOOR_STEP);
+/**
+ * Live geometric fade applied per floor of separation from the active layer (the
+ * "distant layer fade" view dial). A UI mirror of shading.ts's layerFadeStep so
+ * the Layers-panel slider stays in sync. Transient view state — never persisted.
+ */
+export const $layerFade = atom<number>(LAYER_FADE_STEP);
 
 export function bumpRevision(): void {
   $revision.set($revision.get() + 1);

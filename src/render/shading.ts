@@ -92,16 +92,44 @@ export function elevationOf(s: { layer?: number }): number {
   return clampElev(floorOf(s) * floorStep);
 }
 
-/** Opacity kept per floor of separation from the active layer (geometric falloff). */
+/** Default opacity kept per floor of separation from the active layer (geometric falloff). */
 export const LAYER_FADE_STEP = 0.55;
+
+// Live, view-adjustable fade falloff — the Layers-panel "Distant layer fade"
+// slider drives this. A LOWER step fades floors away from the active layer out
+// faster (each floor of separation keeps less opacity); a higher step keeps far
+// floors clearer. Held as module state (a view dial like zoom/spread), not
+// document data.
+export const MIN_LAYER_FADE_STEP = 0.25;
+export const MAX_LAYER_FADE_STEP = 0.8;
+let layerFadeStep = LAYER_FADE_STEP;
+
+/** Current geometric fade applied per floor of separation (the live "layer fade" dial). */
+export function getLayerFadeStep(): number {
+  return layerFadeStep;
+}
+
+/** Set the live fade falloff (clamped). Returns the value actually applied. */
+export function setLayerFadeStep(step: number): number {
+  layerFadeStep =
+    step < MIN_LAYER_FADE_STEP
+      ? MIN_LAYER_FADE_STEP
+      : step > MAX_LAYER_FADE_STEP
+        ? MAX_LAYER_FADE_STEP
+        : step;
+  return layerFadeStep;
+}
 
 /**
  * Opacity multiplier for content `distance` floors away from the active layer:
- * 1 on the active floor, fading geometrically with each floor of separation and
- * clamped to `min` so the farthest layers stay faintly visible rather than gone.
+ * 1 on the active floor, fading geometrically (by the live fade step) with each
+ * floor of separation and clamped to `min` so the farthest layers stay faintly
+ * visible rather than gone. The default `min` floors the fading "stuff" (tokens
+ * and edges) low enough that a far floor can be pushed nearly transparent; the
+ * board frame / labels / badges pass a higher `min` so they stay navigable.
  */
-export function layerFade(distance: number, min = 0.15): number {
+export function layerFade(distance: number, min = 0.06): number {
   const d = Math.abs(distance);
   if (d <= 0) return 1;
-  return Math.max(min, Math.pow(LAYER_FADE_STEP, d));
+  return Math.max(min, Math.pow(layerFadeStep, d));
 }

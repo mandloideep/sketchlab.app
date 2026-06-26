@@ -1,6 +1,13 @@
 import { scene } from "../render/scene";
-import { ELEV_CAP, floorElevation, getFloorStep, setFloorStep } from "../render/shading";
-import { $camera, $floorSpacing, doc } from "../state/store";
+import {
+  ELEV_CAP,
+  floorElevation,
+  getFloorStep,
+  getLayerFadeStep,
+  setFloorStep,
+  setLayerFadeStep,
+} from "../render/shading";
+import { $camera, $floorSpacing, $layerFade, doc } from "../state/store";
 import type { Camera } from "../state/types";
 import { clamp } from "../util";
 import { screenToWorld } from "./viewport";
@@ -230,6 +237,25 @@ export function setFloorSpacing(step: number): number {
   const applied = setFloorStep(step);
   $floorSpacing.set(applied);
   scene.applyCamera();
+  return applied;
+}
+
+/** Current geometric fade per floor of separation (the live "distant layer fade" dial). */
+export function getLayerFade(): number {
+  return getLayerFadeStep();
+}
+
+/**
+ * Set how quickly floors away from the active layer fade out (the Layers-panel
+ * slider). A lower value fades distant floors out faster. Clamped by
+ * setLayerFadeStep; mirrors the applied value into $layerFade and repaints the
+ * board chrome + re-dims the off-floor tokens/edges so the change shows at once
+ * (no camera move needed). Returns what was applied.
+ */
+export function setLayerFade(step: number): number {
+  const applied = setLayerFadeStep(step);
+  $layerFade.set(applied);
+  scene.redrawBoard();
   return applied;
 }
 
