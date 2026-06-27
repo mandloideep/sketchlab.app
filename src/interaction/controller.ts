@@ -219,29 +219,38 @@ export class Controller {
     this.root.style.cursor = c;
   }
 
+  /**
+   * Elevation the selection outline + resize handles ride at — the SAME plane the
+   * outline box/ring is drawn at in drawOverlay, so handles glue to the visible
+   * shape: the lifted slab top (base + H_PED) for rect/image/circle/icon, the
+   * ground plane (base) for text. Keep this in sync with drawOverlay.
+   */
+  private outlineElevation(s: Shape): number {
+    return elevationOf(s) + (s.kind === "text" ? 0 : H_PED);
+  }
+
   /** 8 resize handles (screen space) in index order: tl,t,tr,r,br,b,bl,l.
-   * Projected at the shape's layer elevation so the handles ride a lifted token
-   * (resize math still works on the ground footprint). */
+   * Every handle is projected from its TRUE world position at the outline's
+   * elevation, so corners land on the perspective-warped corners and edge
+   * midpoints sit on the warped edges (not axis-aligned screen averages). */
   private handlePoints(s: Shape): Pt[] {
     const proj = getActiveProjector();
-    const h = elevationOf(s);
+    const h = this.outlineElevation(s);
     const at = (wx: number, wy: number): Pt => {
       const p = projectBoard(proj, wx, wy, h);
       return { x: p.sx, y: p.sy };
     };
-    const tl = at(s.x, s.y);
-    const tr = at(s.x + s.w, s.y);
-    const br = at(s.x + s.w, s.y + s.h);
-    const bl = at(s.x, s.y + s.h);
+    const midX = s.x + s.w / 2;
+    const midY = s.y + s.h / 2;
     return [
-      tl,
-      { x: (tl.x + tr.x) / 2, y: tl.y },
-      tr,
-      { x: tr.x, y: (tr.y + br.y) / 2 },
-      br,
-      { x: (bl.x + br.x) / 2, y: bl.y },
-      bl,
-      { x: tl.x, y: (tl.y + bl.y) / 2 },
+      at(s.x, s.y), // 0 tl
+      at(midX, s.y), // 1 top
+      at(s.x + s.w, s.y), // 2 tr
+      at(s.x + s.w, midY), // 3 right
+      at(s.x + s.w, s.y + s.h), // 4 br
+      at(midX, s.y + s.h), // 5 bottom
+      at(s.x, s.y + s.h), // 6 bl
+      at(s.x, midY), // 7 left
     ];
   }
 
@@ -518,11 +527,15 @@ export class Controller {
         break;
       }
       case "resize": {
-        if (!world) break;
         const rs = doc.board.shapes[g.id];
-        if (rs?.kind === "text") this.applyTextResize(g.id, g.handle, world);
+        if (!rs) break;
+        // unproject the cursor onto the SAME lifted plane the handles ride, so the
+        // dragged edge tracks the handle under the pointer (not its ground shadow).
+        const rw = screenToWorldAt(p.x, p.y, this.outlineElevation(rs));
+        if (!rw) break;
+        if (rs.kind === "text") this.applyTextResize(g.id, g.handle, rw);
         // circles are always 1:1, so lock their aspect regardless of the shift key
-        else this.applyResize(g.id, g.handle, g.aspect, world, e.shiftKey || rs?.kind === "circle");
+        else this.applyResize(g.id, g.handle, g.aspect, rw, e.shiftKey || rs.kind === "circle");
         break;
       }
     }
@@ -1247,18 +1260,16 @@ export class Controller {
       // circle/icon get a ring around the raised disc; rect/image a box around the
       // raised slab; text a box on the ground. Everything rides the shape's layer
       // elevation so the outline stays glued to a lifted token.
-      const base = elevationOf(s);
+      const elev = this.outlineElevation(s); // handles ride this exact plane too
       let pts: Pt[];
       if (s.kind === "circle" || s.kind === "icon") {
         // the disc is a circle of radius min(w,h)/2, so ring that exact circle
         // (padded) rather than the w×h bounding ellipse — keeps the outline
         // hugging the disc instead of ballooning into an oval.
         const r = (Math.min(s.w, s.h) / 2) * 1.14;
-        pts = this.projGroundRing(s.x + s.w / 2, s.y + s.h / 2, r, r, base + H_PED);
-      } else if (s.kind === "text") {
-        pts = this.projGroundBox(s, base);
+        pts = this.projGroundRing(s.x + s.w / 2, s.y + s.h / 2, r, r, elev);
       } else {
-        pts = this.projGroundBox(s, base + H_PED); // rect, image — slab top
+        pts = this.projGroundBox(s, elev); // rect, image — slab top; text — ground
       }
       if (!pts.length) continue;
       this.tracePoly(g, pts);
