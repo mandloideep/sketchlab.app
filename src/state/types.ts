@@ -56,6 +56,8 @@ export interface Edge {
   /** world-space position of a free `to` end (used when `to` is undefined) */
   x2?: number;
   y2?: number;
+  /** stroke / arrow color; omitted on older boards → navy default at render time */
+  fill?: string;
   label: string;
   /** edge label font size in world units; follows the same S/M/L presets as shapes */
   fontSize?: number;

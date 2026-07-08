@@ -22,7 +22,7 @@ import {
   type Projector,
   projectBoard,
 } from "./projection";
-import { elevationOf, floorElevation, H_ARROW } from "./shading";
+import { elevationOf, floorElevation, H_ARROW, shade, tint } from "./shading";
 import {
   LABEL_FONT,
   NAMEPLATE_BACKGROUND_HEX,
@@ -37,13 +37,28 @@ import {
 } from "./labelStyle";
 
 /** Multi-pass cyan glow: wide+faint underlay up to a bright thin core. */
-const GLOW = [
+const LINE_GLOW = [
   { w: 16, color: 0x22d3ee, alpha: 0.06 },
   { w: 10, color: 0x38bdf8, alpha: 0.12 },
   { w: 6, color: 0x67e8f9, alpha: 0.22 },
   { w: 3, color: 0xa5f3fc, alpha: 0.95 },
   { w: 1.4, color: 0xecfeff, alpha: 0.9 },
 ];
+
+export function lineGlow(color: string) {
+  if (color === "#0f2740") {
+    // navy (default fill)
+    return LINE_GLOW;
+  }
+  // other fills require darker tone to be more distinguishable
+  return [
+    { w: 16, color: shade(color, 0.45), alpha: 0.08 },
+    { w: 13, color: shade(color, 0.25), alpha: 0.24 },
+    { w: 10, color: color, alpha: 0.95 },
+    { w: 3, color: tint(color, 0.18), alpha: 0.9 },
+    { w: 1.4, color: tint(color, 0.35), alpha: 0.95 },
+  ];
+}
 
 const FLOW_DOT_SPACING = 34;
 const FLOW_DOT_SPEED = 90;
@@ -346,7 +361,7 @@ export function reprojectEdgeView(
     }
     view.screenBounds = { minX, minY, maxX, maxY };
     const sc = scr[Math.floor(scr.length / 2)].scale;
-    for (const pass of GLOW) {
+    for (const pass of lineGlow(edge.fill ?? "#0f2740")) {
       g.moveTo(scr[0].sx, scr[0].sy);
       for (let i = 1; i < scr.length; i++) g.lineTo(scr[i].sx, scr[i].sy);
       g.stroke({
@@ -368,7 +383,7 @@ export function reprojectEdgeView(
         .lineTo(tip.sx - len * Math.cos(ang - spread), tip.sy - len * Math.sin(ang - spread))
         .lineTo(tip.sx - len * Math.cos(ang + spread), tip.sy - len * Math.sin(ang + spread))
         .closePath();
-      g.fill({ color: 0xa5f3fc, alpha: 0.95 });
+      g.fill({ color: edge.fill ?? "#0f2740", alpha: 0.95 });
     } else {
       clearFlowPulseMesh(view);
     }

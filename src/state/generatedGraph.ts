@@ -230,6 +230,7 @@ export function generatedGraphToBoard(graph: GeneratedGraph, fallbackName: strin
       id,
       from,
       to,
+      fill: DEFAULT_FILL,
       label: edge.label ?? "",
       fontSize: DEFAULT_TEXT_FONT_SIZE,
       directed: edge.directed,
