@@ -19,6 +19,7 @@ import { confirmDialog } from "./confirmDialog";
 import { ControlsHelp } from "./controlsHelp";
 import { LayersPanel } from "./layersPanel";
 import { AIGeneratePanel } from "./aiGeneratePanel";
+import { SkillHelp } from "./skillHelp";
 import { clear, h, toast } from "./dom";
 import { navigate } from "./nav";
 import { createSwatchPicker } from "./swatchPicker";
@@ -58,6 +59,9 @@ const ICON_LAYERS = svg(
 );
 const ICON_HELP = svg(
   '<circle cx="12" cy="12" r="9"/><path d="M9.4 9a2.6 2.6 0 0 1 4.6 1.5c0 1.7-2.4 2-2.4 3.7"/><path d="M12 17h.01"/>',
+);
+const ICON_SKILL = svg(
+  '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
 );
 const ICON_RECENTER = svg(
   '<circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4"/>',
@@ -302,6 +306,16 @@ export async function mountEditor(
     html: GITHUB_ICON,
   });
 
+  const skillHelp = new SkillHelp(editor);
+  const skillBtn = h("button", {
+    class: "btn btn--icon",
+    type: "button",
+    title: "Skill",
+    "aria-label": "Skill",
+    html: ICON_SKILL,
+    onclick: () => skillHelp.toggle(),
+  });
+
   const topbarSlide = h(
     "div",
     { class: "topbar__slide" },
@@ -313,6 +327,7 @@ export async function mountEditor(
     autoLayoutBtn,
     layersBtn,
     githubLink,
+    skillBtn,
     shareBtn,
   );
 
@@ -463,6 +478,7 @@ export async function mountEditor(
       boardDrawer.destroy();
       layersPanel.destroy();
       aiPanel.destroy();
+      skillHelp.destroy();
       controlsHelp.destroy();
       controller.destroy();
       disposeHistory();

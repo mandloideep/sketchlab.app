@@ -1,6 +1,6 @@
 import "./styles.css";
 import { loadBoardById, listBoards, saveBoard } from "./persistence/db";
-import { decodeBoard } from "./persistence/share";
+import { decodeBoard, decodeGeneratedGraphParam } from "./persistence/share";
 import { installRenderPerfDevtools } from "./render/perfDevtools";
 import { createStarterBoard } from "./state/starterBoard";
 import type { Board } from "./state/types";
@@ -15,6 +15,14 @@ let pendingRerender = false;
 
 async function resolveBoard(): Promise<{ board: Board; shared?: boolean }> {
   const url = new URL(location.href);
+
+  const generatedCode = url.searchParams.get("g");
+  if (generatedCode) {
+    const board = decodeGeneratedGraphParam(generatedCode);
+    history.replaceState(null, "", location.pathname + (location.hash || "#/"));
+    if (board) return { board, shared: true };
+  }
+
   const sharedCode = url.searchParams.get("b");
   if (sharedCode) {
     const board = decodeBoard(sharedCode);

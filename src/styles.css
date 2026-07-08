@@ -418,6 +418,91 @@ button {
   color: var(--muted);
 }
 
+/* ---------- skill help ---------- */
+.skill-help {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(2, 6, 23, 0.58);
+  backdrop-filter: blur(3px);
+}
+.skill-help.is-open {
+  display: flex;
+}
+.skill-help__card {
+  width: min(480px, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  padding: 18px 20px 20px;
+  background: var(--panel-solid, #0d1626);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 30px 80px rgba(2, 6, 23, 0.6);
+}
+.skill-help__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.skill-help__head h2 {
+  margin: 0;
+  font-size: 16px;
+  letter-spacing: -0.02em;
+}
+.skill-help__close {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.skill-help__close:hover {
+  color: var(--text);
+  border-color: rgba(148, 163, 184, 0.4);
+}
+.skill-help__body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.skill-help__body p {
+  margin: 0;
+}
+.skill-help__url-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+.skill-help__url {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--bg-2, #0b1220);
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11.5px;
+  line-height: 1.4;
+  word-break: break-all;
+}
+.skill-help__copy {
+  flex: 0 0 auto;
+  align-self: stretch;
+}
+
 /* ---------- confirm dialog ---------- */
 .confirm-dialog {
   position: fixed;
@@ -1499,6 +1584,7 @@ button {
 
   .ai-panel-backdrop,
   .controls-help,
+  .skill-help,
   .confirm-dialog {
     align-items: flex-end;
     padding: max(10px, env(safe-area-inset-top)) 10px calc(10px + env(safe-area-inset-bottom));
@@ -1506,6 +1592,7 @@ button {
 
   .ai-panel,
   .controls-help__card,
+  .skill-help__card,
   .confirm-dialog__card {
     width: 100%;
     max-height: calc(100dvh - 20px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
